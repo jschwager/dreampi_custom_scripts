@@ -4,20 +4,33 @@
 # Updated and maintained by: jschwager (onlycodered)
 
 # Updated 2025-09-15
-ACTION=$1
+ACTION="${1:-}"
+REBOOT=true
 
-if [ "$ACTION" = "enable" ]; then
-  option="1"
-elif [ "$ACTION" = "disable" ]; then
-  option="2"
-else
-  echo "DCNET Server ON/OFF Script Switch"
+show_help() {
+  echo "Usage: $0 <enable|disable> [noreboot]"
   echo ""
-  echo "Choose option number"
-  echo "1. DCNET Script ON"
-  echo "2. DCNET Script OFF (Standard DreamPi)"
-  echo "3. Delete DCNET Files"
-  read -p "Type 1, 2 or 3 and press Enter: " option
+  echo "Examples:"
+  echo "  $0 enable"
+  echo "  $0 disable"
+  echo "  $0 enable noreboot"
+}
+
+case "$ACTION" in
+  enable|disable)
+    ;;
+  *)
+    show_help
+    exit 1
+    ;;
+esac
+
+if [ "${2:-}" = "noreboot" ]; then
+  REBOOT=false
+elif [ -n "${2:-}" ]; then
+  echo "Invalid second argument: $2"
+  show_help
+  exit 1
 fi
 
 cd /home/pi/dreampi/
@@ -59,31 +72,23 @@ copy_standard_script() {
   echo ">>"
 }
 
-delete_dcnet_files() {
-  copy_standard_script
-  rm dreampi_dcnet.py dcnet.rpi
-  echo "Deleting DCNET files: dreampi_dcnet.py and dcnet.rpi"
-  echo "You're now able to download DCNET updated files at option 1"
-  echo ">>"
-}
-
 check_standard_backup
 check_dcnet_files
 
-if [ "$option" -eq 1 ]; then
+if [ "$ACTION" = "enable" ]; then
   copy_dcnet_script
   echo "Done. DCNET Script ON (Standard DreamPi Script disabled)"
-elif [ "$option" -eq 2 ]; then
+elif [ "$ACTION" = "disable" ]; then
   copy_standard_script
   echo "Done. DCNET Script OFF (Standard DreamPi Script enabled)"
-elif [ "$option" -eq 3 ]; then
-  delete_dcnet_files 
-  echo "Done. DCNET files deleted"
-else
-  echo "Invalid option. Please choose 1, 2 or 3."
 fi
 
-echo ">>"
-echo "Restarting RaspberryPi, ready to dial soon"
-sleep 5
-sudo reboot &
+if [ "$REBOOT" = true ]; then
+  echo ">>"
+  echo "Restarting RaspberryPi, ready to dial soon"
+  sleep 5
+  sudo reboot &
+else
+  echo ">>"
+  echo "Reboot skipped (noreboot specified)."
+fi
